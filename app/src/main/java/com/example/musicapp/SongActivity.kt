@@ -1,0 +1,251 @@
+package com.example.musicapp
+import android.annotation.SuppressLint
+import android.media.MediaPlayer
+import android.os.Bundle
+import android.os.Handler
+import android.os.PersistableBundle
+import android.widget.SeekBar
+import androidx.appcompat.app.AppCompatActivity
+import com.example.musicapp.databinding.ActivitySongBinding
+import java.util.concurrent.TimeUnit
+
+class SongActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivitySongBinding
+
+    private var mediaPlayer: MediaPlayer? = null
+
+    private var seekLength : Int = 0
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivitySongBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+
+
+
+        var songName = intent.getStringExtra("songName")
+        var artistName = intent.getStringExtra("artistName")
+        var imageId = intent.getIntExtra("imageId", R.drawable.dragons)
+        var songId = intent.getIntExtra("songId", R.raw.bones)
+        var songDuration = intent.getStringExtra("songDuration")
+
+
+        val imageArray = intent.getIntArrayExtra("imageArray")
+        val songNameArray = intent.getStringArrayExtra("songNameArray")
+        val artistNameArray = intent.getStringArrayExtra("artistNameArray")
+        val songIdArray = intent.getIntArrayExtra("songIdArray")
+
+        binding.songName.text = songName
+        binding.artistName.text = artistName
+        binding.imageId.setImageResource(imageId)
+        binding.songDuration.text = songDuration
+
+        mediaPlayer = MediaPlayer.create(this, songId)
+
+        if (!mediaPlayer!!.isPlaying) {
+            mediaPlayer = MediaPlayer.create(this, songId)
+            mediaPlayer!!.start()
+            updateSeekBar()
+        }
+        binding.play.setOnClickListener {
+            playSong()
+        }
+
+        binding.forward.setOnClickListener {
+            mediaPlayer!!.release()
+            mediaPlayer = null
+            binding.play.setBackgroundResource(R.drawable.baseline_play_arrow_24)
+
+            if (songNameArray!!.indexOf(songName) < 6) {
+                songName = songNameArray!![songNameArray.indexOf(songName) + 1]
+                artistName = artistNameArray!![artistNameArray.indexOf(artistName) + 1]
+                imageId = imageArray!![imageArray.indexOf(imageId) + 1]
+                songId = songIdArray!![songIdArray.indexOf(songId) + 1]
+            } else{
+                songName = songNameArray!![0]
+                artistName = artistNameArray!![0]
+                imageId = imageArray!![0]
+                songId = songIdArray!![0]
+            }
+
+            binding.songName.text = songNameArray!![songNameArray.indexOf(songName)]
+            binding.artistName.text  = artistNameArray!![artistNameArray.indexOf(artistName)]
+            binding.imageId.setImageResource(imageArray!![imageArray.indexOf(imageId)])
+            mediaPlayer = MediaPlayer.create(this, songId!!)
+            val duration = mediaPlayer!!.duration
+            val durationLong = duration.toLong()
+            binding.songDuration.text = durationConverter(durationLong)
+
+            if(mediaPlayer!!.isPlaying) {
+                if (mediaPlayer!!.isPlaying) {
+                    mediaPlayer!!.start()
+                }
+                else if(!mediaPlayer!!.isPlaying){
+                    mediaPlayer!!.pause()
+                }
+            }
+            seekLength = 0
+            updateSeekBar()
+        }
+
+        mediaPlayer!!.setOnCompletionListener {
+            if (songNameArray!!.indexOf(songName) < 6) {
+                songName = songNameArray!![songNameArray.indexOf(songName) + 1]
+                artistName = artistNameArray!![artistNameArray.indexOf(artistName) + 1]
+                imageId = imageArray!![imageArray.indexOf(imageId) + 1]
+                songId = songIdArray!![songIdArray.indexOf(songId) + 1]
+            } else{
+                songName = songNameArray!![0]
+                artistName = artistNameArray!![0]
+                imageId = imageArray!![0]
+                songId = songIdArray!![0]
+            }
+
+            binding.songName.text = songNameArray!![songNameArray.indexOf(songName)]
+            binding.artistName.text  = artistNameArray!![artistNameArray.indexOf(artistName)]
+            binding.imageId.setImageResource(imageArray!![imageArray.indexOf(imageId)])
+            mediaPlayer = MediaPlayer.create(this, songId!!)
+            val duration = mediaPlayer!!.duration
+            val durationLong = duration.toLong()
+            binding.songDuration.text = durationConverter(durationLong)
+
+            mediaPlayer!!.start()
+        }
+
+
+
+
+
+        binding.rewind.setOnClickListener {
+            mediaPlayer!!.release()
+            mediaPlayer = null
+            binding.play.setBackgroundResource(R.drawable.baseline_play_arrow_24)
+
+            if (songNameArray!!.indexOf(songName) > 0) {
+                songName = songNameArray!![songNameArray.indexOf(songName) - 1]
+                artistName = artistNameArray!![artistNameArray.indexOf(artistName) - 1]
+                imageId = imageArray!![imageArray.indexOf(imageId) - 1]
+                songId = songIdArray!![songIdArray.indexOf(songId) - 1]
+            } else{
+                songName = songNameArray!![songNameArray.size - 1]
+                artistName = artistNameArray!![songNameArray.size - 1]
+                imageId = imageArray!![songNameArray.size - 1]
+                songId = songIdArray!![songNameArray.size - 1]
+            }
+            binding.songName.text = songNameArray!![songNameArray.indexOf(songName)]
+            binding.artistName.text  = artistNameArray!![artistNameArray.indexOf(artistName)]
+            binding.imageId.setImageResource(imageArray!![imageArray.indexOf(imageId)])
+            mediaPlayer = MediaPlayer.create(this, songId!!)
+            val duration = mediaPlayer!!.duration
+            val durationLong = duration.toLong()
+            binding.songDuration.text = durationConverter(durationLong)
+            if(mediaPlayer!!.isPlaying) {
+                if (mediaPlayer!!.isPlaying) {
+                    mediaPlayer!!.start()
+                }
+                else if(!mediaPlayer!!.isPlaying){
+                    mediaPlayer!!.pause()
+                }
+            }
+
+            seekLength = 0
+            updateSeekBar()
+        }
+    }
+
+
+
+
+    private fun updateSeekBar(){
+
+        if (mediaPlayer != null){
+            binding.songTime.text = durationConverter(
+                mediaPlayer!!.currentPosition.toLong()
+            )
+        }
+
+
+        seekBarSetup()
+        Handler().postDelayed(runnable, 50)
+    }
+
+    private var runnable = Runnable { updateSeekBar() }
+
+    private fun seekBarSetup() {
+
+        if (mediaPlayer!= null){
+            binding.seekbar.progress = mediaPlayer!!.currentPosition
+            binding.seekbar.max = mediaPlayer!!.duration
+        }
+
+
+        binding.seekbar.setOnSeekBarChangeListener(
+            @SuppressLint(/* ...value = */ "AppCompatCustomView")
+            object : SeekBar.OnSeekBarChangeListener{
+                override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
+                    if (p2){
+                        mediaPlayer!!.seekTo(p1)
+                        binding.songTime.text = durationConverter(p1.toLong())
+                    }
+                }
+
+                override fun onStartTrackingTouch(p0: SeekBar?) {
+
+                }
+
+                override fun onStopTrackingTouch(p0: SeekBar?) {
+                    if(mediaPlayer != null && mediaPlayer!!.isPlaying){
+
+                        if (p0 != null){
+                            mediaPlayer!!.seekTo(p0.progress)
+                        }
+                    }
+
+                }
+
+            })
+    }
+
+    private fun playSong(){
+        if (!mediaPlayer!!.isPlaying) {
+            seekLength = mediaPlayer!!.currentPosition
+            mediaPlayer!!.start()
+            binding.play.setBackgroundResource(R.drawable.baseline_pause_24)
+            updateSeekBar()
+        }
+        else{
+            mediaPlayer!!.pause()
+            seekLength = mediaPlayer!!.currentPosition
+            binding.play.setBackgroundResource(R.drawable.baseline_play_arrow_24)
+        }
+
+    }
+
+    private fun clearMediaPlayer() {
+        if(mediaPlayer!!.isPlaying){
+            mediaPlayer!!.stop()
+        }
+        mediaPlayer!!.release()
+        mediaPlayer = null
+    }
+
+    private fun durationConverter(duration : Long): String {
+        return String.format(
+            "%02d:%02d",
+            TimeUnit.MILLISECONDS.toMinutes(duration),
+            TimeUnit.MILLISECONDS.toSeconds(duration) -
+                    TimeUnit.MINUTES.toSeconds(
+                        TimeUnit.MILLISECONDS.toMinutes(duration)
+                    )
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        clearMediaPlayer()
+    }
+
+}
